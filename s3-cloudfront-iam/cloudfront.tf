@@ -8,6 +8,12 @@ resource "aws_cloudfront_origin_access_control" "oac" {
 }
 
 
+data "aws_cloudfront_function" "existing_function" {
+  name    = "nextjs-static-rewrite"
+  stage   = "LIVE"
+}
+
+
 resource "aws_cloudfront_distribution" "s3_distribution" {
   origin {
     domain_name              = aws_s3_bucket.file_bucket.bucket_regional_domain_name
@@ -30,14 +36,16 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     target_origin_id       = "S3-${aws_s3_bucket.file_bucket.id}"
     viewer_protocol_policy = "redirect-to-https"
 
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
+    compress = true
+
+    cache_policy_id          = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    origin_request_policy_id = "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf"
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = data.aws_cloudfront_function.existing_function.arn
     }
 
-    compress = true
   }
 
   # Price class - Use only North America and Europe
